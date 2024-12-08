@@ -11,15 +11,16 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Scanner;
+
+import com.mysql.cj.protocol.Resultset;
 import org.example.conexion.Conexion;
-import org.example.clasesBase.Entrenador;
-import org.example.clasesBase.Torneo;
-import org.example.controlFicheros.EscrituraFicheros;
-import org.example.controlFicheros.LecturaFicheros;
+import org.example.Entidades.Entrenador;
+import org.example.Entidades.Torneo;
+import org.example.ELIMINAR.controlUsuarios.controlFicheros.EscrituraFicheros;
+import org.example.ELIMINAR.controlUsuarios.controlFicheros.LecturaFicheros;
 
 public class Main {
     public Scanner scanner = new Scanner(System.in);
@@ -41,8 +42,8 @@ public class Main {
     public Main (){
       /* leerTorneos();
         menuInvitado();
-*/
-        mostrarPais();
+       */
+        nuevoEntrenador();
     }
      /*
       En el metodo login, metemos credenciales, y nos asignamos rol
@@ -199,35 +200,33 @@ public class Main {
       Si ambos existen creamos, y metemos en credenciales.txt
      */
     public void nuevoEntrenador() {
-        if(torneos.size()==0){
-            System.out.println("No hay torneos a los que inscribirse aun.\nSaliendo...");
-            menuInvitado();
+        System.out.println("AAAAAAAAAAAAAA");
 
-        }else{
+        System.out.println("Ingrese el nombre del entrenador");
+        String nombre = scanner.nextLine();
+        mostrarPais();
+        System.out.println("Ingrese la nacionalidad del entrenador");
+        String nacionalidad = scanner.nextLine();
+        System.out.println("Introduce el id del torneo al que se quiera introducir");
 
-            System.out.println("Ingrese el nombre del entrenador");
-            String nombre = scanner.nextLine();
-            System.out.println("Ingrese la nacionalidad del entrenador");
-            String nacionalidad = scanner.nextLine();
-            System.out.println("Introduce el id del torneo al que se quiera introducir");
-
-            for (Torneo torneos : torneos) {
-                System.out.println(torneos.getNombre() + "  " + torneos.getId());
+        for (Torneo torneos : torneos) {
+            System.out.println(torneos.getNombre() + "  " + torneos.getId());
+        }
+        int idTorneo = controlarExceptionInt();
+        boolean torneoCorrecto = false;
+        Torneo torneoElegido = null;
+        for (Torneo torneos : torneos) {
+            if (idTorneo == (torneos.getId())) {
+                torneoCorrecto = true;
+                torneoElegido = torneos;
             }
-            int idTorneo =controlarExceptionInt();
-            boolean torneoCorrecto = false;
-            Torneo torneoElegido = null;
-            for (Torneo torneos : torneos) {
-                if (idTorneo == (torneos.getId())) {
-                    torneoCorrecto = true;
-                    torneoElegido = torneos;
-                }
-            }
+        }
 
-        /*
-        Se tienen que cumplior las dos, que el code de nacionalidad este dentro del xml de nacionalidad
-        Y que el id del torneo exista
-         */
+            /*
+            Se tienen que cumplior las dos, que el code de nacionalidad este dentro del xml de nacionalidad
+            Y que el id del torneo exista
+             */
+            /*
             if (lecturaFicheros.leerPaises(nacionalidad) && torneoCorrecto) {
 
                 Entrenador nuevoEntrenador = new Entrenador(generarIdEntrenador(), nombre, nacionalidad);
@@ -244,7 +243,35 @@ public class Main {
                 menuInvitado();
             }
         }
+        */
 
+        try {
+            System.out.println("SELECT nombre FROM appdatabase.paises WHERE id='"
+                    + nacionalidad +"'" );
+            ResultSet rs =conexion.getStatement().executeQuery(
+                    "SELECT nombre FROM appdatabase.pais WHERE id='"
+                            + nacionalidad +"'" );
+            if(rs == null){
+                System.out.println("Pais no reconocido");
+            }else{
+                System.out.println("Pais ok");
+                rs =conexion.getStatement().executeQuery(
+                        "SELECT nombre FROM appdatabase.torneo WHERE id='"
+                                + idTorneo +"'" );
+                if (!(rs==null)){
+                    System.out.println("El torneo existe, es correcto.");
+
+                    System.out.println("INSERT INTO appdatabase.entrenador " +
+                            "(nombre, nacionalidad) VALUES ('"+ nombre +"','"+nacionalidad+"');");
+                    conexion.getStatement().executeUpdate("INSERT INTO appdatabase.entrenador " +
+                            "(nombre, nacionalidad) VALUES ('"+ nombre +"','"+nacionalidad+"');");
+                }
+                System.out.println("aaaaaa");
+
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // Comprobamos que no existen credenciales dentro de credencuales.txt
@@ -267,8 +294,6 @@ public class Main {
 
 
     public void nuevoTorneo() {
-
-
         String pass = null;
         System.out.println("Introduce el nombre del Admin del Torneo");
         String nombre = scanner.nextLine();
@@ -285,6 +310,7 @@ public class Main {
 
         System.out.println("Ingrese el nombre del torneo");
         String nombreTorneo = scanner.nextLine();
+        mostrarPais();
         System.out.println("Ingrese la región del torneo (una letra)");
         char region = scanner.nextLine().charAt(0); // Leer el primer carácter como región
 
@@ -328,7 +354,19 @@ public class Main {
     }
 
     //Esta funcion te lee el .dat
-
+    public void leerTorneoDB(){
+        try {
+            ResultSet rs =conexion.getStatement().executeQuery("SELECT * FROM appdatabase.torneo;");
+            while (rs.next()) {
+                System.out.println("Torneo: " + rs.getInt("id") +
+                        " El nombre es " +rs.getString("nombre")+
+                        " El code de region es " + rs.getString("codRegion") +
+                        " Puntos " + rs.getString("puntosVictoria"));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
     public void leerTorneos() {
         File f = new File("src/main/Files/Torneos.dat");
         if (f.exists() && f.length() > 0) {
@@ -349,8 +387,6 @@ public class Main {
                 System.out.println("Error al leer el archivo de torneos.");
                 e.printStackTrace();
             }
-
-
         }
 
     }
@@ -403,9 +439,10 @@ public class Main {
 
     public void mostrarPais(){
         try {
-            ResultSet paisesQuery = conexion.getStatement().executeQuery("SELECT * FROM paises");
+            ResultSet paisesQuery = conexion.getStatement().executeQuery("SELECT * FROM appdatabase.pais");
             while (paisesQuery.next()) {
-                System.out.println("ID: " + paisesQuery.getInt("id") + ", Nombre: " + paisesQuery.getString("nombre"));
+                System.out.println("Nombre: " + paisesQuery.getString("nombre") +
+                        " El id es " +paisesQuery.getString("id"));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
